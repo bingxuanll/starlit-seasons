@@ -262,7 +262,7 @@ kbd { min-width: 16px; border: 1px solid #a38bb63e; border-radius: 3px; padding:
   .wordmark { gap: 9px; }
   .wordmark-icon { width: 32px; }
   .intro { padding-top: clamp(29px, 7vh, 55px); }
-  .stage { margin-top: 12px; height: calc(var(--disc-size) * .79); }
+  .stage { margin-top: 12px; height: calc(var(--disc-size) * .79); overflow: clip; }
   .controls { margin-top: 1px; }
   .season-button { gap: 5px; min-height: 49px; }
   .season-icon { width: 19px; font-size: 18px; }
