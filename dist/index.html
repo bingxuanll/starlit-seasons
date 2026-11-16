@@ -3,90 +3,43 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#0a0914">
-  <meta name="description" content="在星空下转动四季唱片，看一只小猫和一只小狗追过花开、落叶与初雪。">
+  <meta name="theme-color" content="#080b0f">
+  <meta name="description" content="唱针扫过宇宙中的一片草地，春夏秋冬依次铺开。">
   <title>星野唱片 · 四季轮转</title>
   <link rel="icon" href="data:,">
-  <link rel="preload" href="assets/spring.jpg" as="image">
   <link rel="stylesheet" href="styles.css">
   <script src="scene.js" defer></script>
 </head>
 <body>
-  <canvas id="sky" aria-hidden="true"></canvas>
-  <div class="sky-haze" aria-hidden="true"></div>
-  <header class="site-header">
-    <a class="wordmark" href="./" aria-label="星野唱片首页">
-      <span class="wordmark-icon" aria-hidden="true"><i></i></span>
-      <span class="wordmark-type">星野唱片 <small>STARLIT RECORDS</small></span>
-    </a>
-    <span class="playback-status"><i></i><span id="playback-status">循环播放中</span></span>
-  </header>
+  <main class="viewer">
+    <div class="nebula" aria-hidden="true"></div>
+    <canvas id="meteors" aria-hidden="true"></canvas>
+    <canvas id="world" role="img" aria-label="星空中悬浮的黑色唱片，金色唱针扫过真实的立体草叶，逐圈铺开四季。草地上的黑猫和浅色小狗正在追逐。"></canvas>
 
-  <main>
-    <section class="intro" aria-labelledby="title">
-      <div class="intro-label" aria-hidden="true"><span></span> THE SEASONS <span></span></div>
-      <h1 id="title">四<span>季</span>轮<span>转</span></h1>
-      <p>一张唱片，一片草地，两只跑过四季的小家伙。</p>
-    </section>
-
-    <div class="stage" id="stage" role="img" aria-label="一张在星空中旋转的唱片，盘面上的小猫和小狗在草地上追逐，草地随着唱片转动经历春夏秋冬。">
-      <div class="orbit orbit-outer" aria-hidden="true"></div>
-      <div class="orbit orbit-inner" aria-hidden="true"></div>
-      <div class="season-note" aria-hidden="true">
-        <span class="note-line"></span>
-        <span class="note-caption">正在播放</span>
-        <strong id="season-word">春</strong>
-        <span id="season-english">SPRING</span>
+    <header class="header">
+      <div class="title">
+        <i class="record-mark" aria-hidden="true"></i>
+        <h1>星野唱片</h1>
       </div>
-      <div class="turntable" aria-hidden="true">
-        <div class="record-shadow"></div>
-        <div class="platter-wall"></div>
-        <div class="platter-bevel"></div>
-        <div class="record-plane">
-          <div class="record-grooves"></div>
-          <div class="record-reflection"></div>
-          <div class="record-spin" id="record-spin">
-            <div class="track-marks"></div>
-            <div class="meadow">
-              <div class="meadow-tile is-visible" data-tile="0"></div>
-              <div class="meadow-tile" data-tile="1"></div>
-              <div class="meadow-tile" data-tile="2"></div>
-              <div class="meadow-tile" data-tile="3"></div>
-            </div>
-          </div>
+      <button type="button" id="fullscreen" class="icon-button" aria-label="全屏播放" title="全屏播放">
+        <i class="fullscreen-icon" aria-hidden="true"></i>
+      </button>
+    </header>
+
+    <div id="unavailable" class="unavailable" hidden>当前浏览器无法播放立体场景。</div>
+
+    <div class="console" id="controls">
+      <div class="timeline" aria-hidden="true"><div id="progress"></div></div>
+      <div class="control-row">
+        <div class="seasons" role="group" aria-label="切换季节">
+          <button class="season" data-season="0" aria-pressed="true" type="button"><i aria-hidden="true"></i>春</button>
+          <button class="season" data-season="1" aria-pressed="false" type="button"><i aria-hidden="true"></i>夏</button>
+          <button class="season" data-season="2" aria-pressed="false" type="button"><i aria-hidden="true"></i>秋</button>
+          <button class="season" data-season="3" aria-pressed="false" type="button"><i aria-hidden="true"></i>冬</button>
         </div>
-        <div class="spindle"><i></i></div>
-        <canvas id="life"></canvas>
+        <button type="button" id="play" class="icon-button play" aria-label="暂停" title="播放 / 暂停（空格）"><i aria-hidden="true"></i></button>
       </div>
     </div>
-
-    <section class="controls" aria-label="唱片控制">
-      <div class="seasons" role="group" aria-label="选择季节">
-        <button class="season-button" type="button" data-season="0" aria-pressed="true">
-          <span class="season-icon spring-icon" aria-hidden="true">✿</span>
-          <span>春 <small>SPRING</small></span>
-        </button>
-        <button class="season-button" type="button" data-season="1" aria-pressed="false">
-          <span class="season-icon summer-icon" aria-hidden="true">☀</span>
-          <span>夏 <small>SUMMER</small></span>
-        </button>
-        <button class="season-button" type="button" data-season="2" aria-pressed="false">
-          <span class="season-icon autumn-icon" aria-hidden="true">♢</span>
-          <span>秋 <small>AUTUMN</small></span>
-        </button>
-        <button class="season-button" type="button" data-season="3" aria-pressed="false">
-          <span class="season-icon winter-icon" aria-hidden="true">❄</span>
-          <span>冬 <small>WINTER</small></span>
-        </button>
-      </div>
-      <div class="transport">
-        <button type="button" class="transport-step" id="previous" aria-label="上一季"><i></i></button>
-        <button type="button" class="play" id="play" aria-label="暂停转动"><i></i></button>
-        <button type="button" class="transport-step" id="next" aria-label="下一季"><i></i></button>
-      </div>
-    </section>
   </main>
-
-  <footer class="page-footer"><kbd>空格</kbd> 播放 / 暂停 <span></span> <kbd>←</kbd> <kbd>→</kbd> 切换季节</footer>
 </body>
 </html>
