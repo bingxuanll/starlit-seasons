@@ -24,9 +24,20 @@ button:focus-visible { outline: 1px solid var(--accent); outline-offset: 4px; }
 .nebula, #meteors, #world { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
 .nebula {
   background:
-    radial-gradient(ellipse at 48% 55%, #08101916 20%, #03050970 80%, #02040799),
-    url("assets/milky-way.jpg") center 49% / cover no-repeat,
-    #060a11;
+    radial-gradient(ellipse at 50% 54%, transparent 35%, #05050d78 100%),
+    radial-gradient(ellipse at 52% 56%, #465c9372, #22223e33 41%, transparent 66%),
+    url("assets/milky-way.jpg") center 49% / cover no-repeat #080b16;
+}
+.nebula::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 28% 32%, #bc845b, transparent 37%),
+    radial-gradient(ellipse at 79% 65%, var(--accent), transparent 45%);
+  mix-blend-mode: screen;
+  opacity: .10;
+  transition: background-color 650ms ease;
 }
 #meteors, #world { pointer-events: none; }
 
@@ -37,21 +48,21 @@ button:focus-visible { outline: 1px solid var(--accent); outline-offset: 4px; }
   align-items: center;
   justify-content: space-between;
 }
-.title { display: flex; align-items: center; gap: 11px; color: #dadbd7; }
-.title h1 { margin: 0; font-size: 13px; font-weight: 500; letter-spacing: .21em; }
-.record-mark { position: relative; display: block; width: 22px; height: 22px; border: 1px solid #c2cbd975; border-radius: 50%; }
+.title { display: flex; align-items: center; gap: 12px; color: #f4eee6; }
+.title h1 { margin: 0; font-family: "Songti SC", "Noto Serif CJK SC", SimSun, serif; font-size: clamp(18px, 2.2vw, 24px); font-weight: 600; letter-spacing: .16em; text-shadow: 0 2px 18px #040610b8; }
+.record-mark { position: relative; display: block; width: 24px; height: 24px; border: 1px solid #dddbc886; border-radius: 50%; }
 .record-mark::before, .record-mark::after { content: ""; position: absolute; border-radius: 50%; }
 .record-mark::before { inset: 4px; border: 1px solid #aab3bf60; }
-.record-mark::after { inset: 8px; background: #ded4b6; }
+.record-mark::after { inset: 9px; background: #f0dbb7; box-shadow: 0 0 8px #eed2a578; }
 
 .icon-button {
   display: grid;
   place-items: center;
-  border: 1px solid #c2cbd42c;
-  width: 38px;
+  border: 1px solid #ced8ed38;
+  width: 42px;
   aspect-ratio: 1;
   border-radius: 50%;
-  background: #0c1117b0;
+  background: #121626bc;
   transition: color .2s, background .2s, border-color .2s;
 }
 .icon-button:hover { background: #263138c9; border-color: #c2cbd463; }
@@ -72,33 +83,35 @@ button:focus-visible { outline: 1px solid var(--accent); outline-offset: 4px; }
 
 .console {
   position: absolute;
-  bottom: max(clamp(21px, 5.3vh, 55px), env(safe-area-inset-bottom));
+  bottom: max(clamp(20px, 5vh, 48px), env(safe-area-inset-bottom));
   left: 50%;
   transform: translateX(-50%);
-  width: min(370px, calc(100% - 46px));
-  padding: 12px 15px 7px;
-  border: 1px solid #c1cdd222;
-  border-radius: 13px;
-  background: #0c1116cc;
-  box-shadow: 0 6px 30px #0006;
+  width: min(378px, calc(100% - 40px));
+  padding: 12px 13px 8px;
+  border: 1px solid #bfcae32e;
+  border-radius: 18px;
+  background: linear-gradient(151deg, #222739e8, #0b0e1ae8);
+  box-shadow: inset 0 1px 0 #f0e3cf14, 0 12px 36px #0007;
 }
-.timeline { width: 100%; height: 1px; background: #b5c2be32; }
-#progress { height: 100%; width: 100%; transform-origin: left; transform: scaleX(.23); background: var(--accent); box-shadow: 0 0 8px var(--accent); }
-.control-row { display: flex; align-items: center; justify-content: space-between; gap: clamp(10px, 3vw, 29px); padding-top: 4px; }
+.timeline { width: calc(100% - 8px); margin-inline: auto; height: 1px; background: #b9c5dc32; }
+#progress { height: 100%; width: 100%; transform-origin: left; transform: scaleX(.14); background: var(--accent); box-shadow: 0 0 8px var(--accent); }
+.control-row { display: flex; align-items: center; justify-content: space-between; gap: clamp(7px, 2vw, 17px); padding-top: 6px; }
 .seasons { display: flex; flex: 1; justify-content: space-between; gap: 4px; }
 .season {
   display: inline-flex;
   justify-content: center;
   align-items: center;
   gap: 6px;
-  min-width: 41px;
+  flex: 1;
+  min-width: 40px;
   min-height: 41px;
-  border: 0;
+  border: 1px solid transparent;
+  border-radius: 10px;
   padding: 0 5px;
   background: none;
-  color: #aeb9bf;
-  font-size: 12px;
-  transition: color .2s;
+  color: #bfc4d0;
+  font-size: 14px;
+  transition: color .2s, background .2s, border-color .2s;
 }
 .season i { flex: 0 0 4px; width: 4px; height: 4px; border-radius: 50%; opacity: .58; background: var(--chip); }
 .season:nth-child(1) { --chip: #bfceaa; }
@@ -106,17 +119,17 @@ button:focus-visible { outline: 1px solid var(--accent); outline-offset: 4px; }
 .season:nth-child(3) { --chip: #ddae75; }
 .season:nth-child(4) { --chip: #b8d2e6; }
 .season:hover, .season[aria-pressed="true"] { color: #f5f4ec; }
+.season[aria-pressed="true"] { background: #c3cdf215; border-color: #c3cdf222; }
 .season[aria-pressed="true"] i { opacity: 1; box-shadow: 0 0 8px var(--chip); }
-.play { width: 29px; position: relative; }
-.play::after { content: ""; position: absolute; inset: -5px; border-radius: 50%; }
+.play { width: 39px; position: relative; }
 .play i { width: 8px; height: 9px; border-inline: 2px solid currentColor; }
 body[data-playing="false"] .play i { width: 0; height: 0; margin-left: 2px; border-block: 5px solid transparent; border-left: 7px solid currentColor; border-right: 0; }
 .unavailable { position: absolute; inset: 49% 12% auto; color: #d5dce4; text-align: center; font-size: 13px; }
 
 @media (pointer: coarse) { .icon-button:not(.play) { width: 44px; } }
 @media (max-width: 600px) {
-  .nebula { background-position: center, 57% center; }
-  .console { bottom: max(42px, env(safe-area-inset-bottom)); }
+  .nebula { background-position: center, center, 57% center; }
+  .console { bottom: max(clamp(40px, calc(45vh - 30vw - 95px), 23vh), env(safe-area-inset-bottom)); }
 }
 @media (max-height: 500px) {
   .header { top: 13px; }

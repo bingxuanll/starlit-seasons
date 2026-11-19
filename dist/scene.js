@@ -1,7 +1,7 @@
 'use strict';
 
 const TAU = Math.PI * 2;
-const TURN_SECONDS = 16;
+const TURN_SECONDS = 14;
 const startAngle = -1.15;
 const colors = ['#bccf9d', '#8eb99b', '#dcb37c', '#afc7df'];
 const world = document.querySelector('#world');
@@ -71,16 +71,21 @@ float meadowHeight(vec2 p) {
   return fade * (.20 * hill * hill + .052 * mound);
 }
 vec3 groundColor(int s) {
-  if (s == 0) return vec3(.208, .285, .135);
-  if (s == 1) return vec3(.137, .228, .090);
-  if (s == 2) return vec3(.408, .277, .134);
-  return vec3(.667, .745, .835);
+  if (s == 0) return vec3(.280, .382, .202);
+  if (s == 1) return vec3(.163, .322, .162);
+  if (s == 2) return vec3(.505, .298, .137);
+  return vec3(.675, .760, .887);
 }
 vec3 bladeColor(int s) {
-  if (s == 0) return vec3(.423, .552, .253);
-  if (s == 1) return vec3(.290, .459, .169);
-  if (s == 2) return vec3(.717, .499, .254);
+  if (s == 0) return vec3(.494, .626, .310);
+  if (s == 1) return vec3(.301, .519, .269);
+  if (s == 2) return vec3(.748, .471, .234);
   return vec3(.798, .868, .946);
+}
+vec3 meadowLight(vec2 p) {
+  float key = exp(-dot(p + vec2(2.8, 2.2), p + vec2(2.8, 2.2)) * .057);
+  float fill = exp(-dot(p - vec2(3.6, .9), p - vec2(3.6, .9)) * .065);
+  return vec3(.82, .87, .96) + key * vec3(.47, .38, .21) + fill * vec3(.065, .14, .24);
 }
 float softShadow(vec2 p, vec4 pet, vec2 size) {
   vec2 d = p - pet.xy - vec2(.093, .068);
@@ -90,14 +95,14 @@ float softShadow(vec2 p, vec4 pet, vec2 size) {
   return contact * .37 + penumbra * .17;
 }
 float petShadow(vec2 p) {
-  return 1.0 - softShadow(p, uCat, vec2(.46, .18)) - softShadow(p, uDog, vec2(.56, .21));
+  return 1.0 - softShadow(p, uCat, vec2(.51, .20)) - softShadow(p, uDog, vec2(.63, .23));
 }
 float stylusLight(vec2 p) {
   float a = uStart + uSweep * PI2;
   vec2 d = vec2(cos(a), sin(a));
   float along = dot(p, d);
   float side = dot(p, vec2(-d.y, d.x));
-  return (exp(-side * side * 18.5) * .13 + exp(-side * side * 1.5) * .09) *
+  return (exp(-side * side * 23.0) * .16 + exp(-side * side * 2.0) * .075) *
     smoothstep(.15, 2.0, along) * (1.0 - smoothstep(4.95, 5.7, along));
 }
 `;
@@ -132,7 +137,7 @@ vec3 groundSample(int season, vec2 p) {
   if (!uHasTerrain) return groundColor(season);
   vec2 origin = vec2(float(season % 2), float(season / 2)) * .5;
   vec2 uv = origin + .25 + p * .039;
-  return mix(groundColor(season), texture(uTerrain, uv).rgb, season == 3 ? .78 : .72);
+  return mix(groundColor(season), texture(uTerrain, uv).rgb, season == 3 ? .66 : .61);
 }
 void main() {
   vec2 p = vP.xz;
@@ -146,35 +151,49 @@ void main() {
     vec2 q = rotation(-uTwist) * p;
     float grain = noise(q * 125.0);
     float folds = noise(q * 1.2 + noise(q * 3.0) * .72);
-    float groundLight = (.75 + .18 * folds + .057 * grain) *
-      (.64 + .42 * max(l, 0.0)) * (1.0 - .16 * smoothstep(4.5, 5.17, r));
+    float groundLight = (.80 + .19 * folds + .045 * grain) *
+      (.67 + .40 * max(l, 0.0)) * (1.0 - .19 * smoothstep(4.35, 4.81, r));
     vec3 diffuse = mix(groundSample(uFrom, q), groundSample(uTo, q), season);
-    vec3 reflected = mix(vec3(.84, .90, .89), vec3(.86, .93, 1.05), snow);
-    color = diffuse * reflected * groundLight * petShadow(p);
+    float drifts = smoothstep(.32, .72, noise(q * 1.15 + 17.0));
+    diffuse = mix(diffuse, vec3(.80, .87, .97), snow * drifts * .29);
+    color = diffuse * meadowLight(p) * groundLight * petShadow(p);
     color += vec3(.045, .054, .060) * snow * pow(grain, 12.0);
     color += vec3(.49, .37, .13) * stylusLight(p);
   } else if (uPart == 1) {
-    float band = .74 + .26 * smoothstep(-.26, .015, vP.y);
-    color = vec3(.070, .086, .096) * band * (.67 + .52 * max(l, 0.0));
-    color += vec3(.045, .059, .067) * pow(.5 + .5 * cos(vP.y * 174.0), 5.0) *
-      (.22 + .78 * max(l, 0.0));
-    color += vec3(.072, .083, .089) * smoothstep(-.052, .006, vP.y);
+    float topLip = exp(-abs(vP.y + .028) * 52.0);
+    float lowerLip = exp(-abs(vP.y + .226) * 46.0);
+    float sideLight = .27 + .73 * pow(max(0.0, dot(n, normalize(vec3(-.72, .10, .79)))), 3.0);
+    float blueLight = pow(max(0.0, dot(n, normalize(vec3(.85, .07, .44)))), 6.0);
+    float machining = .5 + .5 * cos(vP.y * 163.0);
+    color = vec3(.078, .087, .108) * (.55 + .55 * sideLight);
+    color += (topLip * .49 + lowerLip * .18 + machining * .035) * sideLight * vec3(.89, .76, .60);
+    color += (topLip * .25 + lowerLip * .14) * blueLight * vec3(.52, .68, .98);
   } else if (uPart == 2) {
     float grooves = .5 + .5 * sin(r * 155.0);
     float specular = pow(max(dot(n, normalize(vec3(-.28, .85, -.38))), 0.0), 7.0);
-    color = vec3(.036, .047, .050) + vec3(.10, .11, .114) * specular * .28;
+    color = vec3(.049, .057, .073) + vec3(.12, .13, .143) * specular * .38;
     if (n.y > .6) {
       float edge = 1.0 - smoothstep(.004, .017, abs(r - .708));
       float inner = 1.0 - smoothstep(.003, .012, abs(r - .405));
-      color += (grooves * .009 + edge * .38 + inner * .105) * vec3(.82, .87, .86);
+      color += (grooves * .018 + edge * .47 + inner * .21) * vec3(.91, .79, .63);
     } else {
       color *= .72 + max(l, 0.0) * .38;
     }
   } else {
-    float angle = fract((atan(p.y, p.x) - uTwist) / PI2 + 1.0);
-    float hashmarks = smoothstep(.942, .996, fract(angle * 144.0));
-    color = vec3(.19, .22, .235) * (.53 + .50 * max(l, 0.0));
-    color += hashmarks * vec3(.18, .21, .22) * (.33 + .44 * max(l, 0.0));
+    float angle = atan(p.y, p.x);
+    float grooves = .5 + .5 * cos(r * 196.0);
+    float warmReflection = pow(.5 + .5 * cos(angle - 2.10), 16.0);
+    float coolReflection = pow(.5 + .5 * cos(angle + .38), 19.0);
+    vec3 sheen = .56 + .44 * cos(13.0 * r + angle * 2.0 + vec3(0.0, 1.8, 3.7));
+    float rim = smoothstep(5.10, 5.19, r);
+    float edgeLine = exp(-abs(r - 5.177) * 76.0);
+    float inlay = exp(-abs(r - 4.821) * 82.0);
+    float spinGlint = pow(.5 + .5 * cos(3.0 * (angle - uTwist)), 14.0);
+    color = vec3(.082, .104, .137) + grooves * vec3(.031, .038, .052);
+    color += warmReflection * (vec3(.34, .26, .19) + sheen * .26);
+    color += coolReflection * (vec3(.15, .22, .38) + sheen * .18);
+    color += (rim * .040 + spinGlint * .021) * sheen;
+    color += (edgeLine * .40 + inlay * .24) * vec3(.91, .80, .67);
   }
   outColor = vec4(color, 1.0);
 }
@@ -191,7 +210,7 @@ void main() {
   float season = seasonAt(p);
   float winter = mix(uFrom == 3 ? 1.0 : 0.0, uTo == 3 ? 1.0 : 0.0, season);
   float tufts = noise(aSeed.xy * 1.43 + noise(aSeed.xy * 5.7) * .52);
-  float height = (.067 + pow(aSeed.z, 2.0) * .216) * mix(.37, 1.31, smoothstep(.22, .72, tufts));
+  float height = (.048 + pow(aSeed.z, 2.4) * .175) * mix(.38, 1.36, smoothstep(.24, .73, tufts));
   height *= mix(1.0, .029 + .089 * pow(aSeed.z, 6.0), winter);
   float t = aBlade.y;
   float width = .008 + aSeed.w * .010;
@@ -204,9 +223,9 @@ void main() {
   vec3 base = mix(groundColor(uFrom), groundColor(uTo), season);
   vec3 tip = mix(bladeColor(uFrom), bladeColor(uTo), season);
   float sun = max(0.0, dot(face, vec2(-.75, -.55)));
-  float lighting = (.59 + .25 * aSeed.z + .32 * sun) * (1.0 - .16 * smoothstep(4.15, 5.18, r));
+  float lighting = (.63 + .27 * aSeed.z + .28 * sun) * (1.0 - .16 * smoothstep(4.13, 4.78, r));
   float pattern = .64 + .23 * tufts + .31 * noise(aSeed.xy * .81);
-  vColor = mix(base * .67, tip, t * .79 + .16) * lighting * pattern * petShadow(p);
+  vColor = mix(base * .67, tip, t * .79 + .16) * lighting * pattern * petShadow(p) * meadowLight(p);
   vColor += vec3(.64, .49, .20) * stylusLight(p) * (.56 + t * .74);
   vTip = t;
 }
@@ -265,7 +284,11 @@ layout(location=0) in vec4 aSeed;
 uniform float uPixel;
 uniform bool uGlow;
 out vec4 vColor;
-out float vSoft;
+out vec3 vShape;
+vec4 seasonalWeights(vec2 p) {
+  return mix(vec4(equal(ivec4(uFrom), ivec4(0, 1, 2, 3))),
+    vec4(equal(ivec4(uTo), ivec4(0, 1, 2, 3))), seasonAt(p));
+}
 void main() {
   vec2 p;
   float height;
@@ -275,32 +298,36 @@ void main() {
     vec2 d = vec2(cos(a), sin(a));
     p = d * 4.91;
     height = .41;
-    size = 61.0;
-    vColor = vec4(1.0, .73, .30, .36);
-    vSoft = 1.0;
+    size = 83.0;
+    vColor = vec4(1.0, .68, .27, .43);
+    vShape = vec3(2.0, 0.0, 0.0);
   } else if (aSeed.w < .54) {
     p = rotation(uTwist) * aSeed.xy;
-    float season = seasonAt(p);
-    float spring = mix(uFrom == 0 ? 1.0 : 0.0, uTo == 0 ? 1.0 : 0.0, season);
-    float summer = mix(uFrom == 1 ? 1.0 : 0.0, uTo == 1 ? 1.0 : 0.0, season);
-    vec3 color = mix(vec3(.92, .88, .67), vec3(.78, .70, .82), aSeed.z * .62);
-    vColor = vec4(color, (.58 + .22 * aSeed.z) * spring + .24 * summer);
-    height = .054 + meadowHeight(aSeed.xy) + aSeed.z * .116;
-    size = 1.0 + pow(aSeed.z, 2.8) * 2.1;
-    vSoft = .05;
+    vec4 seasons = seasonalWeights(p);
+    float cluster = smoothstep(.36, .68, noise(aSeed.xy * 1.55 + 3.0));
+    vec3 petal = mix(vec3(.99, .63, .76), vec3(.98, .90, .84), smoothstep(.16, .70, aSeed.z));
+    vec3 seed = vec3(.82, .76, .41);
+    vec3 leaf = mix(vec3(.63, .20, .067), vec3(.98, .62, .27), aSeed.z);
+    vec3 color = mat3(petal, seed, leaf) * seasons.xyz + vec3(.86, .93, 1.0) * seasons.w;
+    float coverage = dot(seasons, vec4(.92 * cluster, .45 * cluster, .76, .34 * cluster));
+    vColor = vec4(color * meadowLight(p), coverage * (.65 + .35 * aSeed.z));
+    height = meadowHeight(aSeed.xy) + mix(.055 + aSeed.z * .145, .034, seasons.z + seasons.w);
+    size = mix(2.5 + pow(aSeed.z, 1.7) * 4.8, 1.8 + aSeed.z * 4.1, seasons.z + seasons.w);
+    vShape = vec3(0.0, seasons.z, aSeed.z * PI2 + uTwist);
   } else {
     float life = fract(aSeed.z + uTime * (.18 + aSeed.w * .17));
-    float a = uStart + uSweep * PI2 - life * (.37 + aSeed.w * .42) + aSeed.x * .027;
-    float r = .72 + sqrt(abs(aSeed.y) / 5.1) * 4.48 + life * aSeed.x * .17;
+    float a = uStart + uSweep * PI2 - life * (.36 + aSeed.w * .63) + aSeed.x * .041;
+    float r = .82 + sqrt(abs(aSeed.y) / 4.8) * 3.96 + life * aSeed.x * .19;
     p = vec2(cos(a), sin(a)) * r;
-    height = .14 + sin(life * 3.14159) * (.16 + aSeed.w * aSeed.w * (uTo == 3 ? 1.35 : .76));
+    vec4 seasons = seasonalWeights(p);
+    height = .15 + sin(life * 3.14159) * (.20 + aSeed.w * aSeed.w * mix(.83, 1.42, seasons.w));
     height += .073 * sin(uTime * 1.8 + aSeed.x);
     float brightness = pow(max(0.0, sin(life * 3.14159)), .68);
-    vec3 warm = vec3(.97, .79, .49);
-    vec3 tint = mix(warm, vec3(.78, .88, .99), uTo == 3 ? .90 : .22);
-    vColor = vec4(tint, brightness * (.39 + mod(aSeed.y * 12.0, 1.0) * .58));
-    size = 1.15 + aSeed.z * aSeed.z * 2.45;
-    vSoft = .24;
+    vec3 tint = seasons.x * vec3(.99, .69, .79) + seasons.y * vec3(.97, .86, .51) +
+      seasons.z * vec3(1.0, .62, .31) + seasons.w * vec3(.78, .89, 1.0);
+    vColor = vec4(tint, brightness * (.32 + mod(aSeed.y * 12.0, 1.0) * .51));
+    size = 1.4 + aSeed.z * aSeed.z * (2.7 + seasons.x + seasons.z);
+    vShape = vec3(1.0, seasons.x + seasons.z, life * 7.0 + aSeed.x);
   }
   gl_Position = project(vec3(p.x, height, p.y));
   gl_PointSize = max(1.0, size * uPixel);
@@ -308,12 +335,29 @@ void main() {
 `;
 const fleckFragment = `
 in vec4 vColor;
-in float vSoft;
+in vec3 vShape;
 out vec4 outColor;
 void main() {
-  float r = length(gl_PointCoord - .5) * 2.0;
-  float falloff = (1.0 - smoothstep(.28 - vSoft * .25, 1.0, r)) * exp(-r * r * vSoft * 3.5);
-  outColor = vec4(vColor.rgb, vColor.a * falloff);
+  vec2 p = (gl_PointCoord - .5) * 2.0;
+  float r = length(p);
+  vec3 color = vColor.rgb;
+  float opacity;
+  if (vShape.x > 1.5) {
+    opacity = exp(-r * r * 6.0) * (1.0 - smoothstep(.66, 1.0, r));
+  } else {
+    vec2 q = rotation(vShape.z) * p;
+    float leaf = 1.0 - smoothstep(.44, .92, length(q * vec2(.99, 1.87)));
+    if (vShape.x < .5) {
+      float edge = .69 + .13 * cos(5.0 * atan(q.y, q.x + .0001));
+      float bloom = 1.0 - smoothstep(edge - .20, edge + .07, r);
+      color = mix(color, vec3(.96, .78, .42), (1.0 - smoothstep(.12, .26, r)) * (1.0 - vShape.y));
+      opacity = mix(bloom, leaf, vShape.y);
+    } else {
+      float grain = 1.0 - smoothstep(.18, .91, r);
+      opacity = mix(grain, leaf, vShape.y);
+    }
+  }
+  outColor = vec4(color, vColor.a * opacity);
 }
 `;
 
@@ -343,7 +387,8 @@ void main() {
   vec4 pixel = texture(uPetImage, vUV);
   if (pixel.a < .07) discard;
   float warmth = stylusLight(vGround);
-  vec3 color = pixel.rgb * vec3(.87, .90, .91) + pixel.rgb * warmth * vec3(.92, .49, .17);
+  vec3 color = pixel.rgb * (meadowLight(vGround) * .94 + vec3(.14, .11, .10));
+  color += pixel.rgb * warmth * vec3(.92, .49, .17);
   float snow = mix(uFrom == 3 ? 1.0 : 0.0, uTo == 3 ? 1.0 : 0.0, seasonAt(vGround));
   color += pixel.rgb * vec3(.020, .034, .055) * snow;
   outColor = vec4(color, pixel.a);
@@ -399,11 +444,11 @@ function terrainMesh() {
     if (join) parts.at(-1).count += vertices.length / 6 - start;
     else parts.push({ part, start, count: vertices.length / 6 - start });
   }
-  surface(1, 5.20, 5.15, .003, -.257, 192);
-  surface(3, 5.205, 5.108, .010, .010, 192);
+  surface(1, 5.207, 5.16, .004, -.272, 192);
+  surface(3, 5.208, 4.77, .010, .010, 192);
   const rows = 24;
   for (let row = 0; row < rows; row++) {
-    surface(0, 5.135 * (rows - row) / rows, 5.135 * (rows - row - 1) / rows, .014, .014, 144, row > 0);
+    surface(0, 4.805 * (rows - row) / rows, 4.805 * (rows - row - 1) / rows, .015, .015, 144, row > 0);
   }
   surface(2, .732, .744, .181, .019, 96);
   surface(2, .732, 0, .182, .182, 96);
@@ -422,7 +467,7 @@ function fieldSeeds(count, seed, flowers = false) {
   const data = new Float32Array(count * 4);
   for (let i = 0; i < count; i++) {
     const angle = random() * TAU;
-    const radius = Math.sqrt(.021 + random() * .979) * 5.118;
+    const radius = Math.sqrt(.027 + random() * .973) * 4.79;
     const offset = i * 4;
     data[offset] = Math.cos(angle) * radius;
     data[offset + 1] = Math.sin(angle) * radius;
@@ -470,7 +515,7 @@ function sphereMesh() {
 }
 
 function fleckMesh() {
-  const count = 1980;
+  const count = 1700;
   const vao = gl.createVertexArray();
   gl.bindVertexArray(vao);
   attribute(bufferData(fieldSeeds(count, 74, true)), 0, 4, 4);
@@ -486,11 +531,11 @@ function petMesh() {
 
 function movePet(kind, time) {
   const puppy = kind === 'puppy';
-  const offset = puppy ? .78 + .20 * Math.sin(time * 1.2) : 0;
-  const a = .45 + time * .93 + .22 * Math.sin(time * 1.3) - offset;
-  const x = 1.66 * Math.sin(a) + .18 * Math.sin(a * 2);
-  const z = 1.96 + .86 * Math.cos(a) + .12 * Math.sin(2 * a);
-  const angle = Math.atan2(-.86 * Math.sin(a) + .24 * Math.cos(2 * a), 1.66 * Math.cos(a) + .36 * Math.cos(2 * a));
+  const offset = puppy ? .84 + .23 * Math.sin(time * 1.2) : 0;
+  const a = .24 + time * .89 + .22 * Math.sin(time * 1.3) - offset;
+  const x = 1.98 * Math.sin(a) + .24 * Math.sin(a * 2);
+  const z = 1.82 + .97 * Math.cos(a) + .15 * Math.sin(2 * a);
+  const angle = Math.atan2(-.97 * Math.sin(a) + .30 * Math.cos(2 * a), 1.98 * Math.cos(a) + .48 * Math.cos(2 * a));
   const gait = (time * (puppy ? 3.20 : 3.55) + .1 * Math.sin(time * 1.7) + offset) % 1;
   return { kind, x, z, gait, c: Math.cos(angle), s: Math.sin(angle) };
 }
@@ -529,8 +574,8 @@ function drawNeedle(batch, angle) {
     link(batch, root, last, next, .012 + .003 * t, [.78, .68, .42], .57);
     last = next;
   }
-  link(batch, root, [4.63, .407, 0], [5.14, .434, 0], .052, [1, .85, .51], 1);
-  link(batch, root, [4.79, .443, 0], [5.07, .461, 0], .028, [1, .96, .75], 1);
+  link(batch, root, [4.64, .407, 0], [5.07, .434, 0], .043, [1, .82, .48], .93);
+  link(batch, root, [4.74, .439, 0], [5.00, .452, 0], .026, [1, .96, .75], 1);
 }
 
 const images = {
@@ -578,7 +623,7 @@ function createScene() {
 let scene;
 let playing = !reducedMotion.matches;
 let elapsed = 0;
-let turn = .23;
+let turn = .14;
 let season = 0;
 let lastFrame;
 let frameRequest;
@@ -609,8 +654,9 @@ function renderPets(scene, cat, dog) {
   for (const pet of [cat, dog]) {
     const texture = scene.textures[pet.kind];
     if (!texture) continue;
-    const width = (pet.kind === 'puppy' ? .934 : .833) * (.78 + .22 * Math.abs(pet.c));
-    const height = pet.kind === 'puppy' ? .608 : .570;
+    const scale = layout.width < 600 ? 1.46 : 1.28;
+    const width = (pet.kind === 'puppy' ? .934 : .833) * (.84 + .16 * Math.abs(pet.c)) * scale;
+    const height = (pet.kind === 'puppy' ? .608 : .570) * scale;
     const pose = Math.floor(pet.gait * 4);
     const hop = Math.max(0, Math.cos(pet.gait * TAU + .22)) * .037;
     gl.bindTexture(gl.TEXTURE_2D, texture);
@@ -641,7 +687,7 @@ function drawScene() {
 
   uniforms(programs.grass, cat, dog);
   gl.bindVertexArray(grasses);
-  const density = layout.width < 600 ? 37000 : 59000;
+  const density = layout.width < 600 ? 33000 : 54000;
   gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 7, density);
 
   shapes.used = 0;
@@ -655,7 +701,7 @@ function drawScene() {
 
   const particles = uniforms(programs.flecks, cat, dog);
   gl.bindVertexArray(flecks.vao);
-  gl.uniform1f(particles.Pixel, layout.pixel * Math.max(.72, Math.min(1.25, layout.unit / 91)));
+  gl.uniform1f(particles.Pixel, layout.pixel * Math.max(.66, Math.min(1.3, layout.unit / 87)));
   gl.depthMask(false);
   gl.uniform1i(particles.Glow, 0);
   gl.drawArrays(gl.POINTS, 0, flecks.count);
