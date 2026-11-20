@@ -8,6 +8,9 @@ const world = document.querySelector('#world');
 const sky = document.querySelector('#meteors');
 const play = document.querySelector('#play');
 const fullscreen = document.querySelector('#fullscreen');
+const music = document.querySelector('#music');
+const musicStatus = document.querySelector('#music-status');
+const soundtrack = document.querySelector('#soundtrack');
 const progress = document.querySelector('#progress');
 const buttons = [...document.querySelectorAll('[data-season]')];
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
@@ -70,6 +73,23 @@ float meadowHeight(vec2 p) {
   float mound = noise(p * 1.71 + vec2(1.0, 7.0));
   return fade * (.20 * hill * hill + .052 * mound);
 }
+float winterAt(vec2 p) {
+  float season = seasonAt(p);
+  return mix(uFrom == 3 ? 1.0 : 0.0, uTo == 3 ? 1.0 : 0.0, season);
+}
+float snowLayerHeight(vec2 world, vec2 local) {
+  float r = length(local);
+  float winter = winterAt(world);
+  float cover = smoothstep(.74, 1.16, r) * (1.0 - smoothstep(4.13, 4.76, r));
+  float broad = noise(local * .47 + vec2(7.4, 2.1));
+  float pillows = noise(local * 1.18 + noise(local * .38 + 13.0) * .66);
+  float wind = .5 + .5 * sin(local.x * .72 + local.y * .28 + broad * 2.2);
+  return winter * cover * (.105 + broad * .085 + pillows * .055 + wind * .022);
+}
+float meadowSurfaceHeight(vec2 local) {
+  vec2 world = rotation(uTwist) * local;
+  return meadowHeight(local) + snowLayerHeight(world, local);
+}
 vec3 groundColor(int s) {
   if (s == 0) return vec3(.280, .382, .202);
   if (s == 1) return vec3(.163, .322, .162);
@@ -118,8 +138,8 @@ void main() {
   vN = aNormal;
   if (uPart == 0) {
     vec2 p = rotation(-uTwist) * vP.xz;
-    float h = meadowHeight(p);
-    vec2 diff = rotation(uTwist) * vec2(h - meadowHeight(p + vec2(.043, 0)), h - meadowHeight(p + vec2(0, .043)));
+    float h = meadowSurfaceHeight(p);
+    vec2 diff = rotation(uTwist) * vec2(h - meadowSurfaceHeight(p + vec2(.043, 0)), h - meadowSurfaceHeight(p + vec2(0, .043)));
     vN = normalize(vec3(diff.x, .043, diff.y));
     vP.y += h;
   }
@@ -147,17 +167,19 @@ void main() {
   vec3 color;
   if (uPart == 0) {
     float season = seasonAt(p);
-    float snow = mix(uFrom == 3 ? 1.0 : 0.0, uTo == 3 ? 1.0 : 0.0, season);
+    float snow = winterAt(p);
     vec2 q = rotation(-uTwist) * p;
     float grain = noise(q * 125.0);
     float folds = noise(q * 1.2 + noise(q * 3.0) * .72);
+    float snowSoftness = noise(q * .58 + 31.0) * .62 + noise(q * 1.84 + 4.0) * .38;
     float groundLight = (.80 + .19 * folds + .045 * grain) *
       (.67 + .40 * max(l, 0.0)) * (1.0 - .19 * smoothstep(4.35, 4.81, r));
     vec3 diffuse = mix(groundSample(uFrom, q), groundSample(uTo, q), season);
     float drifts = smoothstep(.32, .72, noise(q * 1.15 + 17.0));
-    diffuse = mix(diffuse, vec3(.80, .87, .97), snow * drifts * .29);
+    diffuse = mix(diffuse, vec3(.855, .906, .982), snow * (.56 + drifts * .34));
     color = diffuse * meadowLight(p) * groundLight * petShadow(p);
-    color += vec3(.045, .054, .060) * snow * pow(grain, 12.0);
+    color += vec3(.115, .135, .165) * snow * (.22 + snowSoftness * .18);
+    color += vec3(.35, .43, .57) * snow * pow(grain, 19.0) * .32;
     color += vec3(.49, .37, .13) * stylusLight(p);
   } else if (uPart == 1) {
     float topLip = exp(-abs(vP.y + .028) * 52.0);
@@ -209,14 +231,14 @@ void main() {
   float r = length(p);
   float season = seasonAt(p);
   float winter = mix(uFrom == 3 ? 1.0 : 0.0, uTo == 3 ? 1.0 : 0.0, season);
-  float tufts = noise(aSeed.xy * 1.43 + noise(aSeed.xy * 5.7) * .52);
-  float height = (.048 + pow(aSeed.z, 2.4) * .175) * mix(.38, 1.36, smoothstep(.24, .73, tufts));
-  height *= mix(1.0, .029 + .089 * pow(aSeed.z, 6.0), winter);
+  float tufts = noise(aSeed.xy * 1.18 + noise(aSeed.xy * 4.9) * .43);
+  float height = (.073 + pow(aSeed.z, 1.75) * .225) * mix(.78, 1.44, smoothstep(.20, .76, tufts));
+  height *= mix(1.0, .035 + .10 * pow(aSeed.z, 5.0), winter);
   float t = aBlade.y;
-  float width = .008 + aSeed.w * .010;
+  float width = .010 + aSeed.w * .014;
   vec2 face = vec2(cos(aSeed.w * PI2), sin(aSeed.w * PI2));
   vec2 wind = vec2(sin(p.x * 1.3 + p.y * .61 - uTime * 1.2), cos(p.y * .63 - uTime * .9));
-  vec2 slip = vec2(.019, .005) + wind * .056;
+  vec2 slip = vec2(.018, .006) + wind * (.052 + aSeed.z * .023);
   float flatten = min(1.0, petShadow(p) * 1.30);
   vec2 stem = p + face * aBlade.x * width + (slip + face * .052) * t * t * (1.0 - winter * .85);
   gl_Position = project(vec3(stem.x, .018 + meadowHeight(aSeed.xy) + t * height * flatten, stem.y));
@@ -224,7 +246,7 @@ void main() {
   vec3 tip = mix(bladeColor(uFrom), bladeColor(uTo), season);
   float sun = max(0.0, dot(face, vec2(-.75, -.55)));
   float lighting = (.63 + .27 * aSeed.z + .28 * sun) * (1.0 - .16 * smoothstep(4.13, 4.78, r));
-  float pattern = .64 + .23 * tufts + .31 * noise(aSeed.xy * .81);
+  float pattern = .78 + .18 * tufts + .19 * noise(aSeed.xy * .81);
   vColor = mix(base * .67, tip, t * .79 + .16) * lighting * pattern * petShadow(p) * meadowLight(p);
   vColor += vec3(.64, .49, .20) * stylusLight(p) * (.56 + t * .74);
   vTip = t;
@@ -311,23 +333,35 @@ void main() {
     vec3 color = mat3(petal, seed, leaf) * seasons.xyz + vec3(.86, .93, 1.0) * seasons.w;
     float coverage = dot(seasons, vec4(.92 * cluster, .45 * cluster, .76, .34 * cluster));
     vColor = vec4(color * meadowLight(p), coverage * (.65 + .35 * aSeed.z));
-    height = meadowHeight(aSeed.xy) + mix(.055 + aSeed.z * .145, .034, seasons.z + seasons.w);
+    height = meadowSurfaceHeight(aSeed.xy) + mix(.065 + aSeed.z * .155, .045, seasons.z + seasons.w);
     size = mix(2.5 + pow(aSeed.z, 1.7) * 4.8, 1.8 + aSeed.z * 4.1, seasons.z + seasons.w);
     vShape = vec3(0.0, seasons.z, aSeed.z * PI2 + uTwist);
   } else {
-    float life = fract(aSeed.z + uTime * (.18 + aSeed.w * .17));
-    float a = uStart + uSweep * PI2 - life * (.36 + aSeed.w * .63) + aSeed.x * .041;
-    float r = .82 + sqrt(abs(aSeed.y) / 4.8) * 3.96 + life * aSeed.x * .19;
+    float life = fract(aSeed.z + uTime * (.115 + aSeed.w * .105));
+    float a = uStart + uSweep * PI2 - life * (.48 + aSeed.w * .82) + aSeed.x * .047;
+    float r = .75 + sqrt(abs(aSeed.y) / 4.8) * 4.00 + life * aSeed.x * .14;
     p = vec2(cos(a), sin(a)) * r;
     vec4 seasons = seasonalWeights(p);
-    height = .15 + sin(life * 3.14159) * (.20 + aSeed.w * aSeed.w * mix(.83, 1.42, seasons.w));
-    height += .073 * sin(uTime * 1.8 + aSeed.x);
-    float brightness = pow(max(0.0, sin(life * 3.14159)), .68);
-    vec3 tint = seasons.x * vec3(.99, .69, .79) + seasons.y * vec3(.97, .86, .51) +
-      seasons.z * vec3(1.0, .62, .31) + seasons.w * vec3(.78, .89, 1.0);
-    vColor = vec4(tint, brightness * (.32 + mod(aSeed.y * 12.0, 1.0) * .51));
-    size = 1.4 + aSeed.z * aSeed.z * (2.7 + seasons.x + seasons.z);
-    vShape = vec3(1.0, seasons.x + seasons.z, life * 7.0 + aSeed.x);
+    float base = meadowSurfaceHeight(rotation(-uTwist) * p);
+    float arc = sin(life * 3.14159);
+    float fall = pow(1.0 - life, .72);
+    float springHeight = .12 + arc * (.52 + aSeed.w * .48);
+    float summerHeight = .31 + arc * (.40 + aSeed.w * .36) + .09 * sin(uTime * 2.0 + aSeed.x);
+    float autumnHeight = .08 + fall * (1.05 + aSeed.w * .68);
+    float winterHeight = .08 + fall * (1.30 + aSeed.w * .88);
+    height = base + dot(seasons, vec4(springHeight, summerHeight, autumnHeight, winterHeight));
+    p += vec2(sin(life * 9.0 + aSeed.x), cos(life * 6.0 + aSeed.y)) *
+      dot(seasons, vec4(.13, .045, .22, .17));
+    float brightness = pow(max(0.0, arc), .38);
+    vec3 tint = seasons.x * mix(vec3(1.0, .61, .76), vec3(1.0, .92, .91), aSeed.z) +
+      seasons.y * vec3(1.0, .83, .34) +
+      seasons.z * mix(vec3(1.0, .32, .08), vec3(1.0, .76, .20), aSeed.z) +
+      seasons.w * mix(vec3(.78, .89, 1.0), vec3(1.0), aSeed.z);
+    float visibility = dot(seasons, vec4(.72, .84, .91, .96));
+    vColor = vec4(tint, brightness * visibility * (.55 + aSeed.w * .43));
+    size = dot(seasons, vec4(3.6, 2.8, 5.8, 4.6)) + aSeed.z * aSeed.z *
+      dot(seasons, vec4(4.5, 3.4, 6.8, 5.5));
+    vShape = vec3(1.0, dot(seasons, vec4(0.0, 1.0, 2.0, 3.0)), life * 9.0 + aSeed.x);
   }
   gl_Position = project(vec3(p.x, height, p.y));
   gl_PointSize = max(1.0, size * uPixel);
@@ -352,9 +386,19 @@ void main() {
       float bloom = 1.0 - smoothstep(edge - .20, edge + .07, r);
       color = mix(color, vec3(.96, .78, .42), (1.0 - smoothstep(.12, .26, r)) * (1.0 - vShape.y));
       opacity = mix(bloom, leaf, vShape.y);
+    } else if (vShape.y < .5) {
+      opacity = leaf;
+    } else if (vShape.y < 1.5) {
+      opacity = exp(-r * r * 3.6) * (1.0 - smoothstep(.72, 1.0, r));
+    } else if (vShape.y < 2.5) {
+      float vein = 1.0 - smoothstep(.025, .12, abs(q.x));
+      opacity = leaf;
+      color += vec3(.19, .055, .015) * vein * leaf * .48;
     } else {
-      float grain = 1.0 - smoothstep(.18, .91, r);
-      opacity = mix(grain, leaf, vShape.y);
+      float angle = atan(q.y, q.x + .0001);
+      float star = .63 + .18 * cos(angle * 6.0);
+      opacity = 1.0 - smoothstep(star - .18, star + .14, r);
+      opacity *= .72 + .28 * (1.0 - smoothstep(.12, .28, r));
     }
   }
   outColor = vec4(color, vColor.a * opacity);
@@ -369,7 +413,8 @@ out vec2 vUV;
 out vec2 vGround;
 void main() {
   vec2 p = uPetQuad.xy;
-  float h = meadowHeight(rotation(-uTwist) * p) + .017 + uPetPose.w;
+  vec2 local = rotation(-uTwist) * p;
+  float h = meadowSurfaceHeight(local) + .017 + uPetPose.w;
   vec4 anchor = project(vec3(p.x, h, p.y));
   vec2 offset = vec2(aCorner.x - .5, aCorner.y - .085) * uPetQuad.zw * uView;
   gl_Position = anchor + vec4(offset * (1.0 + p.y * .014), .003 - aCorner.y * .023, 0.0);
@@ -446,7 +491,7 @@ function terrainMesh() {
   }
   surface(1, 5.207, 5.16, .004, -.272, 192);
   surface(3, 5.208, 4.77, .010, .010, 192);
-  const rows = 24;
+  const rows = 40;
   for (let row = 0; row < rows; row++) {
     surface(0, 4.805 * (rows - row) / rows, 4.805 * (rows - row - 1) / rows, .015, .015, 144, row > 0);
   }
@@ -481,7 +526,7 @@ function grassMesh() {
   const vao = gl.createVertexArray();
   gl.bindVertexArray(vao);
   const blade = bufferData(new Float32Array([-1, 0, 1, 0, -.67, .47, .67, .47, -.28, .78, .28, .78, 0, 1]));
-  const seeds = bufferData(fieldSeeds(59000, 4108));
+  const seeds = bufferData(fieldSeeds(118000, 4108));
   attribute(blade, 0, 2, 2);
   attribute(seeds, 1, 4, 4, 0, 1);
   return vao;
@@ -515,7 +560,7 @@ function sphereMesh() {
 }
 
 function fleckMesh() {
-  const count = 1700;
+  const count = 2800;
   const vao = gl.createVertexArray();
   gl.bindVertexArray(vao);
   attribute(bufferData(fieldSeeds(count, 74, true)), 0, 4, 4);
@@ -622,6 +667,8 @@ function createScene() {
 
 let scene;
 let playing = !reducedMotion.matches;
+let musicEnabled = true;
+let musicAttempt = 0;
 let elapsed = 0;
 let turn = .14;
 let season = 0;
@@ -687,7 +734,7 @@ function drawScene() {
 
   uniforms(programs.grass, cat, dog);
   gl.bindVertexArray(grasses);
-  const density = layout.width < 600 ? 33000 : 54000;
+  const density = layout.width < 600 ? 70000 : 108000;
   gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 7, density);
 
   shapes.used = 0;
@@ -794,6 +841,38 @@ function sync() {
   cancelAnimationFrame(frameRequest);
   lastFrame = undefined;
   if (playing && !document.hidden && scene) frameRequest = requestAnimationFrame(tick);
+  syncMusic();
+}
+
+function syncMusic() {
+  const attempt = ++musicAttempt;
+  if (!musicEnabled || !playing || document.hidden || !scene) {
+    soundtrack.pause();
+    return;
+  }
+  musicStatus.textContent = '';
+  if (!soundtrack.hasAttribute('src') || soundtrack.error) soundtrack.src = soundtrack.dataset.src;
+  soundtrack.play().catch(error => {
+    if (attempt !== musicAttempt) return;
+    if (error?.name === 'NotAllowedError') {
+      musicStatus.textContent = '点击页面后将自动播放背景音乐。';
+      return;
+    }
+    reportMusicError();
+  });
+}
+
+function setMusic(value) {
+  musicEnabled = value;
+  music.setAttribute('aria-pressed', String(value));
+  musicStatus.textContent = value && !playing ? '播放唱片时将响起背景音乐。' : '';
+  syncMusic();
+}
+
+function reportMusicError() {
+  if (!musicEnabled) return;
+  setMusic(false);
+  musicStatus.textContent = '无法播放背景音乐，请重试。';
 }
 
 function setPlaying(value) {
@@ -813,6 +892,7 @@ function selectSeason(index) {
 function setSceneAvailable(available) {
   document.querySelector('#unavailable').hidden = available;
   document.querySelector('#controls').hidden = !available;
+  music.disabled = !available;
   sync();
 }
 
@@ -835,6 +915,13 @@ document.addEventListener('fullscreenchange', () => {
 
 for (const [i, button] of buttons.entries()) button.addEventListener('click', () => selectSeason(i));
 play.addEventListener('click', () => setPlaying(!playing));
+music.addEventListener('click', () => setMusic(!musicEnabled));
+soundtrack.addEventListener('error', reportMusicError);
+function resumeBlockedMusic() {
+  if (musicEnabled && playing && soundtrack.paused) syncMusic();
+}
+document.addEventListener('pointerdown', resumeBlockedMusic, { passive: true });
+document.addEventListener('keydown', resumeBlockedMusic);
 document.addEventListener('keydown', event => {
   if (event.altKey || event.ctrlKey || event.metaKey || event.repeat || !scene) return;
   if (event.code === 'Space' && !event.target.closest?.('button, a, input, textarea, select')) {

@@ -55,6 +55,8 @@ button:focus-visible { outline: 1px solid var(--accent); outline-offset: 4px; }
 .record-mark::before { inset: 4px; border: 1px solid #aab3bf60; }
 .record-mark::after { inset: 9px; background: #f0dbb7; box-shadow: 0 0 8px #eed2a578; }
 
+.header-actions { position: relative; display: flex; align-items: center; gap: 8px; }
+
 .icon-button {
   display: grid;
   place-items: center;
@@ -66,6 +68,20 @@ button:focus-visible { outline: 1px solid var(--accent); outline-offset: 4px; }
   transition: color .2s, background .2s, border-color .2s;
 }
 .icon-button:hover { background: #263138c9; border-color: #c2cbd463; }
+.music { color: #aab3c5; }
+.music[aria-pressed="true"] { color: var(--accent); border-color: var(--accent); }
+.music:disabled { opacity: .45; cursor: default; }
+.music-status:not(:empty) {
+  position: absolute;
+  inset: calc(100% + 8px) 0 auto auto;
+  width: max-content;
+  max-width: min(245px, calc(100vw - 36px));
+  border: 1px solid #ced8ed38;
+  border-radius: 10px;
+  padding: 6px 9px;
+  background: #121626eb;
+  font-size: .875rem;
+}
 .fullscreen-icon {
   width: 13px;
   height: 13px;
